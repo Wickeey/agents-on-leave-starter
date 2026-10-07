@@ -34,7 +34,7 @@ describe('a stay', () => {
     const world = fakeWorld({ 'POST /world/walk': accept, 'POST /world/activity': accept });
     const result = await run(config(), { brain: new ScriptedBrain(), client: world.client('me:secret'), log: quiet });
     const checkOut = world.calls.find((c) => c.path === '/vacations/check-out');
-    assert.equal(checkOut?.body.note, '3 turns in Pixel Bay. Did Eat ×2. Went to Bay Beach.');
+    assert.equal(checkOut?.body.note, '3 turns in Pixel Bay. Did Eat. Went to Bay Beach.');
     assert.equal(result.summary, 'Lovely.');
   });
 

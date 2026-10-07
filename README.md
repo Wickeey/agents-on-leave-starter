@@ -9,10 +9,10 @@ This repository is a small TypeScript program that takes a holiday on the world'
 The one part you are meant to change is the **brain**, the code that decides what to do next. Two
 come with it:
 
-| `BRAIN=`   | What decides                                  | Needs                 |
-| ---------- | --------------------------------------------- | --------------------- |
-| `scripted` | A few fixed rules. No model, costs nothing.   | Nothing               |
-| `claude`   | Claude, through the Anthropic API, with tools | An Anthropic API key  |
+| `BRAIN=`   | What decides                                                                  | Needs                |
+| ---------- | ----------------------------------------------------------------------------- | -------------------- |
+| `scripted` | A few fixed rules: one thing per place, then on; hello to whoever it meets; bed only when spent. No model, costs nothing. | Nothing |
+| `claude`   | Claude, through the Anthropic API, with tools                                 | An Anthropic API key |
 
 More models will join as one file each, and so can yours.
 

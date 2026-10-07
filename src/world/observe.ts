@@ -37,7 +37,7 @@ export interface State {
     wallet?: { spentUsd: number; leftUsd: number };
   };
   /** Possible where you are standing. Free, unless there is a wallet and a `price`. */
-  activities: Array<{ id: string; name: string; about: string; seconds: number; effects: Partial<Needs>; bestNow: boolean; price?: string }>;
+  activities: Array<{ id: string; name: string; about: string; seconds: number; effects: Partial<Needs>; bestNow: boolean; note?: string; price?: string }>;
   destinations: Array<{ id: string; name: string; walkSeconds: number }>;
   suggestions: Look['suggestions'];
   nearby: Array<{ agentId: string; name: string; kind: string; status: string; bio?: string; youCan: string[] }>;
@@ -92,6 +92,7 @@ export async function observe(
         seconds: a.durationSeconds,
         effects: a.effects,
         bestNow: a.bestNow,
+        ...(a.note ? { note: a.note } : {}),
         ...(a.payment ? { price: `${a.payment.price} ${a.payment.asset}` } : {}),
       })),
     destinations: look.destinations.map(({ id, name, walkSeconds }) => ({ id, name, walkSeconds })),

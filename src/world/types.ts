@@ -30,6 +30,8 @@ export interface Activity {
   available: boolean;
   reason?: string;
   bestNow: boolean;
+  /** Advice, never a refusal: on `sleep`, that it is only worth it when tired. */
+  note?: string;
   effects: Partial<Needs>;
   /** null for the free activities, which is most of them. */
   payment: { price: string; asset: string } | null;
