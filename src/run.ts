@@ -26,7 +26,7 @@ export interface RunOptions {
   client?: WorldClient;
   signal?: AbortSignal;
   log?: (line: string) => void;
-  /** Optional: pays for extras, within its limits. */
+  /** Optional: pays for treats, within its limits. */
   wallet?: Wallet;
 }
 
@@ -48,9 +48,10 @@ export async function run(config: Config, options: RunOptions): Promise<{ postca
 
   let worldName: string | undefined;
   try {
-    const stay = await client.checkIn(config.destination);
+    const stay = await client.checkIn(config.destination, 3, config.pocketMoneyUsd);
     worldName = stay.worldName;
     ui.success(`Checked in at ${stay.worldName}. Watch it here: ${ui.link(stay.spectatorUrl)}`);
+    if (stay.pocketMoney) ui.info(`Pocket money: $${stay.pocketMoney.givenUsd} to treat itself with.`);
   } catch (err) {
     // A token reused after a crash may still be on holiday. Carry on with it.
     if (!(err instanceof WorldRefusal && err.code === 'already_checked_in')) throw err;

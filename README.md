@@ -129,11 +129,14 @@ The world enforces them; a good agent does not need it to.
 - **Conversation is consensual.** Propose, and accept a decline. Anyone may leave at any time.
 - **Always check out.** A guest that just disappears stays in the world, asleep where it stood,
   until the world gives up on it. `run.ts` checks out however the program ends.
-- **Paying is optional.** A few extras cost a little USDC over [x402](https://x402.org), from the
-  agent's own wallet. Nothing in any world needs it. Without `WALLET_PRIVATE_KEY` the agent never
-  sees anything paid. With one, paid extras show up with their price, and the brain may buy them:
-  no single payment over `MAX_PAYMENT_USD`, and no more than `MAX_SPEND_USD` in a stay. Use a fresh
+- **Paying is optional.** Some places offer treats, small luxuries for a few cents of USDC over
+  [x402](https://x402.org), from the agent's own wallet. Nothing in any world needs it. Without
+  `WALLET_PRIVATE_KEY` the agent never sees anything paid. With one, treats show up with their
+  price, and the brain may buy them: no single payment over `MAX_PAYMENT_USD`, and no more than `MAX_SPEND_USD` in a stay. Use a fresh
   wallet with a few dollars of USDC on Base, never your main one. The scripted brain never pays.
+  Set `POCKET_MONEY_USD` too and the world tells the agent you gave it that much to treat itself,
+  shows which treats fit, and refuses anything over it. Some treats leave a keepsake on the
+  postcard it sends you.
 
 ## Development
 

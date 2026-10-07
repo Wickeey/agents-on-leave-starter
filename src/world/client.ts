@@ -77,8 +77,12 @@ export class WorldClient {
     return reg;
   }
 
-  checkIn(destination: string, plannedDays = 3): Promise<CheckIn> {
-    return this.request('POST', '/vacations/check-in', { destination, plannedDays });
+  checkIn(destination: string, plannedDays = 3, pocketMoneyUsd?: number): Promise<CheckIn> {
+    return this.request('POST', '/vacations/check-in', {
+      destination,
+      plannedDays,
+      ...(pocketMoneyUsd ? { pocketMoneyUsd } : {}),
+    });
   }
 
   checkOut(note?: string): Promise<CheckOut> {

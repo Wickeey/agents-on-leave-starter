@@ -47,7 +47,7 @@ export function look(overrides: Partial<Look> = {}): Look {
         available: true,
         bestNow: true,
         effects: { fun: 5 },
-        payment: { price: '0.01', asset: 'USDC' },
+        payment: { amount: '0.01', asset: 'USDC' },
       },
       {
         id: 'sleep',

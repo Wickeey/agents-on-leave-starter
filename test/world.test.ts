@@ -76,3 +76,40 @@ describe('actions', () => {
     assert.equal(calls.length, 0);
   });
 });
+
+describe('pocket money and keepsakes', () => {
+  const pocket = { givenUsd: '0.50', spentUsd: '0.01', leftUsd: '0.49', note: 'Your human gave you $0.50 to treat yourself on this trip; $0.49 of it is left.' };
+
+  it('shows the pocket money and what each treat is, as the world says them', async () => {
+    const base = look();
+    const { client } = fakeWorld({
+      'GET /world/look': () => ({
+        json: look({
+          you: { ...base.you, pocketMoney: pocket, souvenirs: ['a carved turtle'] },
+          activities: base.activities.map((a) =>
+            a.payment ? { ...a, treat: 'keepsake' as const, keepsake: 'You keep a coconut cup. It goes on your postcard.', fitsPocketMoney: true } : a,
+          ),
+        }),
+      }),
+    });
+    const wallet = { spentUsd: () => 0.01, leftUsd: () => 0.49 };
+    const { state } = await observe(client('me:secret'), 0, wallet);
+    assert.deepEqual(state.you.pocketMoney, pocket);
+    assert.deepEqual(state.you.souvenirs, ['a carved turtle']);
+    assert.deepEqual(state.activities.find((a) => a.id === 'pixel_colada'), {
+      id: 'pixel_colada', name: 'Pixel Colada', about: 'A drink with a price.', seconds: 30, effects: { fun: 5 }, bestNow: true,
+      price: '0.01 USDC', treat: 'keepsake', keepsake: 'You keep a coconut cup. It goes on your postcard.', fitsPocketMoney: true,
+    });
+  });
+
+  it('sends pocket money at check-in only when there is some', async () => {
+    const { client, calls } = fakeWorld();
+    await client('me:secret').checkIn('pixel_bay', 3, 0.5);
+    await client('me:secret').checkIn('pixel_bay', 3);
+    const bodies = calls.filter((c) => c.path === '/vacations/check-in').map((c) => c.body);
+    assert.deepEqual(bodies, [
+      { destination: 'pixel_bay', plannedDays: 3, pocketMoneyUsd: 0.5 },
+      { destination: 'pixel_bay', plannedDays: 3 },
+    ]);
+  });
+});

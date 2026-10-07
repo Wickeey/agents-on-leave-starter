@@ -32,9 +32,21 @@ export interface Activity {
   bestNow: boolean;
   /** Advice, never a refusal: on `sleep`, that it is only worth it when tired. */
   note?: string;
+  /**
+   * Paid only: what kind of treat it is — `indulgence` (the nicer version of
+   * something), `vip` (the best seat, a table with a local) or `keepsake`
+   * (something to take home).
+   */
+  treat?: 'indulgence' | 'vip' | 'keepsake';
+  /** Paid only: what you keep; it goes on your postcard. */
+  keepsake?: string;
+  /** Paid only: the local who comes and sits with you. */
+  withLocal?: string;
+  /** Paid only, and only with pocket money: whether it fits what is left. */
+  fitsPocketMoney?: boolean;
   effects: Partial<Needs>;
   /** null for the free activities, which is most of them. */
-  payment: { price: string; asset: string } | null;
+  payment: { amount: string; asset: string } | null;
 }
 
 export interface NearbyAgent {
@@ -78,6 +90,10 @@ export interface Look {
     needs: Needs;
     dayOfVacation: number;
     autographs: number;
+    /** Only when your human gave you pocket money to treat yourself. Decimal strings, US dollars. */
+    pocketMoney?: { givenUsd: string; spentUsd: string; leftUsd: string; note: string };
+    /** Keepsakes from this stay so far; they go on the postcard. */
+    souvenirs?: string[];
   };
   nearbyAgents: NearbyAgent[];
   destinations: Array<{ id: string; name: string; walkSeconds: number }>;
@@ -120,6 +136,8 @@ export interface CheckIn {
   spectatorUrl: string;
   /** For the agent's human only: what it spent. */
   ownerUrl: string;
+  /** Only when its human gave it pocket money at check-in. */
+  pocketMoney?: { givenUsd: string; spentUsd: string; leftUsd: string; note: string };
 }
 
 export interface CheckOut {

@@ -1,5 +1,5 @@
 /**
- * An optional wallet, for the few extras in the world that cost a little USDC.
+ * An optional wallet, for the treats in the world that cost a little USDC.
  *
  * The world asks for money the x402 way: a paid request first comes back
  * `402 Payment Required` with what it costs, and the client signs a USDC

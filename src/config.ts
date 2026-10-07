@@ -20,6 +20,12 @@ export interface Config {
   walletNetwork: `${string}:${string}`;
   maxPaymentUsd: number;
   maxSpendUsd: number;
+  /**
+   * Optional. Pocket money for the trip, sent at check-in: the human's gift
+   * to treat itself with. The world tells the agent, shows which treats fit,
+   * and refuses one that would go over it.
+   */
+  pocketMoneyUsd?: number;
 }
 
 export class ConfigError extends Error {
@@ -72,5 +78,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     walletNetwork: network,
     maxPaymentUsd: dollars(env, 'MAX_PAYMENT_USD', 0.05),
     maxSpendUsd: dollars(env, 'MAX_SPEND_USD', 0.5),
+    pocketMoneyUsd: optional(env.POCKET_MONEY_USD) === undefined ? undefined : dollars(env, 'POCKET_MONEY_USD', 0),
   };
 }

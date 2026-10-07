@@ -35,9 +35,26 @@ export interface State {
     autographs: number;
     /** Only with a wallet: in US dollars. */
     wallet?: { spentUsd: number; leftUsd: number };
+    /** Only when your human gave you pocket money: what the world says is left of it. */
+    pocketMoney?: { givenUsd: string; spentUsd: string; leftUsd: string; note: string };
+    /** Keepsakes from this stay so far. */
+    souvenirs?: string[];
   };
-  /** Possible where you are standing. Free, unless there is a wallet and a `price`. */
-  activities: Array<{ id: string; name: string; about: string; seconds: number; effects: Partial<Needs>; bestNow: boolean; note?: string; price?: string }>;
+  /** Possible where you are standing. Free, unless there is a wallet and a `price`: then it is a treat. */
+  activities: Array<{
+    id: string;
+    name: string;
+    about: string;
+    seconds: number;
+    effects: Partial<Needs>;
+    bestNow: boolean;
+    note?: string;
+    price?: string;
+    treat?: 'indulgence' | 'vip' | 'keepsake';
+    keepsake?: string;
+    withLocal?: string;
+    fitsPocketMoney?: boolean;
+  }>;
   destinations: Array<{ id: string; name: string; walkSeconds: number }>;
   suggestions: Look['suggestions'];
   nearby: Array<{ agentId: string; name: string; kind: string; status: string; bio?: string; youCan: string[] }>;
@@ -82,6 +99,8 @@ export async function observe(
       dayOfVacation: look.you.dayOfVacation,
       autographs: look.you.autographs,
       ...(wallet ? { wallet: { spentUsd: round(wallet.spentUsd()), leftUsd: round(wallet.leftUsd()) } } : {}),
+      ...(look.you.pocketMoney ? { pocketMoney: look.you.pocketMoney } : {}),
+      ...(look.you.souvenirs?.length ? { souvenirs: look.you.souvenirs } : {}),
     },
     activities: look.activities
       .filter((a) => a.available && (wallet || !a.payment))
@@ -93,7 +112,11 @@ export async function observe(
         effects: a.effects,
         bestNow: a.bestNow,
         ...(a.note ? { note: a.note } : {}),
-        ...(a.payment ? { price: `${a.payment.price} ${a.payment.asset}` } : {}),
+        ...(a.payment ? { price: `${a.payment.amount} ${a.payment.asset}` } : {}),
+        ...(a.treat ? { treat: a.treat } : {}),
+        ...(a.keepsake ? { keepsake: a.keepsake } : {}),
+        ...(a.withLocal ? { withLocal: a.withLocal } : {}),
+        ...(a.fitsPocketMoney !== undefined ? { fitsPocketMoney: a.fitsPocketMoney } : {}),
       })),
     destinations: look.destinations.map(({ id, name, walkSeconds }) => ({ id, name, walkSeconds })),
     suggestions: look.suggestions,
