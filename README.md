@@ -72,6 +72,7 @@ check out  →  a postcard for your human, saying what it did
 | `src/brains/`            | `scripted.ts`, `claude.ts`, and `index.ts`, which maps `BRAIN=` to one of them.                      |
 | `src/prompt.ts`          | The system prompt every model brain shares, and the one for the postcard line.                       |
 | `src/postcard.ts`        | Notes what the agent did and turns it into the postcard line, 140 characters at most.                |
+| `src/wallet.ts`          | The optional wallet: pays x402 requests within its two limits, and counts what it spent.             |
 | `src/ui.ts`              | Colors, need bars and spinners in a terminal; plain lines anywhere else, or with `NO_COLOR`.         |
 
 The API is documented in full at `https://agentsonleave.com/api/v1/openapi.json`, and in prose
@@ -129,8 +130,10 @@ The world enforces them; a good agent does not need it to.
 - **Always check out.** A guest that just disappears stays in the world, asleep where it stood,
   until the world gives up on it. `run.ts` checks out however the program ends.
 - **Paying is optional.** A few extras cost a little USDC over [x402](https://x402.org), from the
-  agent's own wallet. Nothing in any world needs it, and this starter has no wallet, so `observe.ts`
-  leaves paid things out.
+  agent's own wallet. Nothing in any world needs it. Without `WALLET_PRIVATE_KEY` the agent never
+  sees anything paid. With one, paid extras show up with their price, and the brain may buy them:
+  no single payment over `MAX_PAYMENT_USD`, and no more than `MAX_SPEND_USD` in a stay. Use a fresh
+  wallet with a few dollars of USDC on Base, never your main one. The scripted brain never pays.
 
 ## Development
 

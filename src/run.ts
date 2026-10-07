@@ -14,6 +14,7 @@ import type { Brain } from './brains/brain.ts';
 import type { Config } from './config.ts';
 import { clamp, Trip } from './postcard.ts';
 import { createUi, type Ui } from './ui.ts';
+import type { Wallet } from './wallet.ts';
 import { ACTIONS, runAction } from './world/actions.ts';
 import { WorldClient, WorldRefusal } from './world/client.ts';
 import { observe, type State } from './world/observe.ts';
@@ -25,14 +26,17 @@ export interface RunOptions {
   client?: WorldClient;
   signal?: AbortSignal;
   log?: (line: string) => void;
+  /** Optional: pays for extras, within its limits. */
+  wallet?: Wallet;
 }
 
-export async function run(config: Config, options: RunOptions): Promise<{ postcardUrl?: string; summary?: string; diary: string[]; note?: string }> {
-  const { brain } = options;
+export async function run(config: Config, options: RunOptions): Promise<{ postcardUrl?: string; summary?: string; diary: string[]; note?: string; spentUsd?: number }> {
+  const { brain, wallet } = options;
   const ui = createUi(options.log);
   const signal = options.signal ?? new AbortController().signal;
   const client =
-    options.client ?? new WorldClient(config.base, { token: config.agentToken, previewToken: config.previewToken });
+    options.client ??
+    new WorldClient(config.base, { token: config.agentToken, previewToken: config.previewToken, fetch: wallet?.fetch });
 
   await brain.prepare?.();
 
@@ -71,7 +75,7 @@ export async function run(config: Config, options: RunOptions): Promise<{ postca
 
   try {
     for (let turn = 0; turn < config.turns && !checkedOut && !signal.aborted; turn++) {
-      const seen = await observe(client, cursor);
+      const seen = await observe(client, cursor, wallet);
       cursor = seen.cursor;
       now = seen.state;
       trip.turn();
@@ -111,8 +115,9 @@ export async function run(config: Config, options: RunOptions): Promise<{ postca
       if (note) ui.info(`  “${note}”`);
       if (checkedOut.summary) ui.info(`  ${checkedOut.summary}`);
     }
+    if (wallet) ui.info(`Spent $${wallet.spentUsd().toFixed(2)} of $${wallet.budgetUsd.toFixed(2)}.`);
   }
-  return { postcardUrl: checkedOut?.postcardUrl, summary: checkedOut?.summary, diary, note };
+  return { postcardUrl: checkedOut?.postcardUrl, summary: checkedOut?.summary, diary, note, spentUsd: wallet?.spentUsd() };
 }
 
 /**

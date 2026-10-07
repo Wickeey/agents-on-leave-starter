@@ -8,6 +8,7 @@ import { createBrain } from './brains/index.ts';
 import { ConfigError, loadConfig } from './config.ts';
 import { run } from './run.ts';
 import { createUi } from './ui.ts';
+import { createWallet } from './wallet.ts';
 import { WorldRefusal } from './world/client.ts';
 
 const ui = createUi();
@@ -23,7 +24,12 @@ try {
   const config = loadConfig();
   const brain = createBrain(config);
   ui.info(`Brain: ${ui.strong(brain.name)}. World: ${ui.link(config.base)}.`);
-  await run(config, { brain, signal: stop.signal });
+  const wallet = await createWallet(config);
+  if (wallet) {
+    const address = `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`;
+    ui.info(`Wallet: ${ui.strong(address)} on ${wallet.network}, up to $${wallet.budgetUsd.toFixed(2)} this stay.`);
+  }
+  await run(config, { brain, wallet, signal: stop.signal });
 } catch (err) {
   if (err instanceof WorldRefusal) {
     ui.error(`The world said no: ${err.message}${err.hint ? `\n  ${err.hint}` : ''}`);

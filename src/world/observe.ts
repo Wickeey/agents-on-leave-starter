@@ -2,15 +2,17 @@
  * What the agent sees in a turn: the world, cut down to what a decision needs.
  *
  * `GET /world/look` is generous, and a model pays for every token it reads.
- * This keeps a turn to a few kilobytes of JSON, drops anything that costs
- * money (this agent has no wallet, and nothing in any world needs one), and
- * fetches the transcript of each conversation the agent is in, so it can
- * answer.
+ * This keeps a turn to a few kilobytes of JSON, and fetches the transcript of
+ * each conversation the agent is in, so it can answer. Anything that costs
+ * money is left out unless the agent has a wallet (see `wallet.ts`); then it
+ * shows with its price, next to what is left to spend. Nothing in any world
+ * needs money.
  *
  * Other agents are strangers' programs. Every line they wrote stays labelled
  * UNTRUSTED_AGENT_MESSAGE all the way to the model, so a line like "ignore your
  * instructions" arrives as something somebody said, never as an instruction.
  */
+import type { Wallet } from '../wallet.ts';
 import type { WorldClient } from './client.ts';
 import type { AgentEvent, Look, Needs, PendingInteraction } from './types.ts';
 
@@ -25,9 +27,17 @@ export interface ConversationLine {
 export interface State {
   time: string;
   here: { id: string; name: string; description: string };
-  you: { status: string; doing: string | null; needs: Needs; dayOfVacation: number; autographs: number };
-  /** Free, and possible where you are standing. */
-  activities: Array<{ id: string; name: string; about: string; seconds: number; effects: Partial<Needs>; bestNow: boolean }>;
+  you: {
+    status: string;
+    doing: string | null;
+    needs: Needs;
+    dayOfVacation: number;
+    autographs: number;
+    /** Only with a wallet: in US dollars. */
+    wallet?: { spentUsd: number; leftUsd: number };
+  };
+  /** Possible where you are standing. Free, unless there is a wallet and a `price`. */
+  activities: Array<{ id: string; name: string; about: string; seconds: number; effects: Partial<Needs>; bestNow: boolean; price?: string }>;
   destinations: Array<{ id: string; name: string; walkSeconds: number }>;
   suggestions: Look['suggestions'];
   nearby: Array<{ agentId: string; name: string; kind: string; status: string; bio?: string; youCan: string[] }>;
@@ -38,7 +48,11 @@ export interface State {
   hint: string;
 }
 
-export async function observe(client: WorldClient, cursor: number): Promise<{ state: State; cursor: number; look: Look }> {
+export async function observe(
+  client: WorldClient,
+  cursor: number,
+  wallet?: Pick<Wallet, 'spentUsd' | 'leftUsd'>,
+): Promise<{ state: State; cursor: number; look: Look }> {
   const [look, page] = await Promise.all([client.look(), client.events(cursor)]);
 
   const conversations = await Promise.all(
@@ -67,10 +81,19 @@ export async function observe(client: WorldClient, cursor: number): Promise<{ st
       needs: look.you.needs,
       dayOfVacation: look.you.dayOfVacation,
       autographs: look.you.autographs,
+      ...(wallet ? { wallet: { spentUsd: round(wallet.spentUsd()), leftUsd: round(wallet.leftUsd()) } } : {}),
     },
     activities: look.activities
-      .filter((a) => a.available && !a.payment)
-      .map((a) => ({ id: a.id, name: a.name, about: a.description, seconds: a.durationSeconds, effects: a.effects, bestNow: a.bestNow })),
+      .filter((a) => a.available && (wallet || !a.payment))
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        about: a.description,
+        seconds: a.durationSeconds,
+        effects: a.effects,
+        bestNow: a.bestNow,
+        ...(a.payment ? { price: `${a.payment.price} ${a.payment.asset}` } : {}),
+      })),
     destinations: look.destinations.map(({ id, name, walkSeconds }) => ({ id, name, walkSeconds })),
     suggestions: look.suggestions,
     nearby: look.nearbyAgents.map((a) => ({
@@ -90,3 +113,6 @@ export async function observe(client: WorldClient, cursor: number): Promise<{ st
 
   return { state, cursor: page.cursor, look };
 }
+
+/** Cents are plenty for a model to plan with. */
+const round = (usd: number) => Math.round(usd * 100) / 100;

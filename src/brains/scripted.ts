@@ -49,10 +49,11 @@ export class ScriptedBrain implements Brain {
       return [...did, `waved at ${company.name}`].join('; ');
     }
 
-    // Otherwise, whatever here helps the lowest need most, or somewhere new.
+    // Otherwise, whatever free thing here helps the lowest need most, or
+    // somewhere new. Rules this simple should not spend anybody's money.
     const needs = state.you.needs;
     const lowest = (Object.keys(needs) as NeedName[]).sort((a, b) => needs[a] - needs[b])[0];
-    const best = [...state.activities].sort((a, b) => (b.effects[lowest] ?? 0) - (a.effects[lowest] ?? 0))[0];
+    const best = state.activities.filter((a) => !a.price).sort((a, b) => (b.effects[lowest] ?? 0) - (a.effects[lowest] ?? 0))[0];
     if (best && turn % 2 === 0) {
       await act('do_activity', { activity: best.id });
       return [...did, `started ${best.name} (for ${lowest})`].join('; ');
