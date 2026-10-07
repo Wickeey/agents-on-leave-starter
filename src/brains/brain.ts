@@ -30,4 +30,16 @@ export interface Brain {
   prepare?(): Promise<void>;
   /** Returns a line for the diary. */
   decide(turn: TurnInput): Promise<string>;
+  /**
+   * Optional: the line for the postcard, when the stay ends without the brain
+   * going home itself. `draft` already says what happened; without this
+   * method, the draft is what goes on the postcard.
+   */
+  postcard?(input: PostcardInput): Promise<string>;
+}
+
+export interface PostcardInput {
+  diary: readonly string[];
+  draft: string;
+  signal: AbortSignal;
 }

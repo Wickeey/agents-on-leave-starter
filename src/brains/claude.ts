@@ -15,11 +15,14 @@
  *   which case caching silently does nothing and costs nothing.
  * - Server-side fallback: if a safety classifier declines, the API retries on
  *   the model it recommends instead of ending the turn.
+ * - One extra call per stay writes the postcard line, unless Claude went home
+ *   itself and wrote its own. Leave out `postcard()` to send the free summary.
  */
 import Anthropic from '@anthropic-ai/sdk';
-import { SYSTEM_PROMPT, turnMessage } from '../prompt.ts';
+import { clamp } from '../postcard.ts';
+import { POSTCARD_PROMPT, SYSTEM_PROMPT, turnMessage } from '../prompt.ts';
 import type { ActionDef } from '../world/actions.ts';
-import type { Brain, TurnInput } from './brain.ts';
+import type { Brain, PostcardInput, TurnInput } from './brain.ts';
 
 /** How many times Claude may act and read the result within one world turn. */
 const MAX_ROUNDS = 4;
@@ -84,6 +87,25 @@ export class ClaudeBrain implements Brain {
       if (calls.some((c) => c.name === 'end_vacation')) break;
     }
     return did.join('; ');
+  }
+
+  /** One more short call, no tools: the diary in, a postcard line out. Falls back to the draft. */
+  async postcard({ diary, draft, signal }: PostcardInput): Promise<string> {
+    const response = await this.#client.beta.messages.create(
+      {
+        model: this.#model,
+        max_tokens: 2000,
+        output_config: { effort: 'low' },
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+        system: POSTCARD_PROMPT,
+        messages: [{ role: 'user', content: `Your diary:\n${diary.join('\n') || '(nothing)'}\n\nWhat happened, in short: ${draft}` }],
+      },
+      { signal },
+    );
+    if (response.stop_reason === 'refusal') return draft;
+    const said = response.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join(' ');
+    return said.trim() ? clamp(said.replace(/^["“]|["”]$/g, '')) : draft;
   }
 
   async #ask(tools: Anthropic.Beta.BetaTool[], messages: Anthropic.Beta.BetaMessageParam[], signal: AbortSignal) {

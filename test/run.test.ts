@@ -21,6 +21,36 @@ describe('a stay', () => {
     assert.equal(result.postcardUrl, 'http://x/postcards/1');
   });
 
+  it('keeps the diary and its own log free of terminal colors', async () => {
+    const world = fakeWorld();
+    const lines: string[] = [];
+    const result = await run(config(), { brain: new ScriptedBrain(), client: world.client(), log: (l) => lines.push(l) });
+    for (const line of [...result.diary, ...lines]) assert.ok(!line.includes('\x1b'), JSON.stringify(line));
+    assert.ok(lines.includes(result.diary[0]), 'turns are logged as the diary has them');
+  });
+
+  it('writes what it did on the postcard when the turns run out', async () => {
+    const accept = () => ({ json: {} });
+    const world = fakeWorld({ 'POST /world/walk': accept, 'POST /world/activity': accept });
+    const result = await run(config(), { brain: new ScriptedBrain(), client: world.client('me:secret'), log: quiet });
+    const checkOut = world.calls.find((c) => c.path === '/vacations/check-out');
+    assert.equal(checkOut?.body.note, '3 turns in Pixel Bay. Did Eat ×2. Went to Bay Beach.');
+    assert.equal(result.summary, 'Lovely.');
+  });
+
+  it('lets the brain write the postcard, and falls back to the draft if it fails', async () => {
+    const decide = async () => 'sat about';
+    const writer: Brain = { name: 'writer', decide, postcard: async ({ draft }) => `Dear human: ${draft}` };
+    const world = fakeWorld();
+    await run(config(), { brain: writer, client: world.client('me:secret'), log: quiet });
+    assert.equal(world.calls.find((c) => c.path === '/vacations/check-out')?.body.note, 'Dear human: 3 turns in Pixel Bay. Rested.');
+
+    const failing: Brain = { name: 'failing', decide, postcard: async () => { throw new Error('no'); } };
+    const again = fakeWorld();
+    await run(config(), { brain: failing, client: again.client('me:secret'), log: quiet });
+    assert.equal(again.calls.find((c) => c.path === '/vacations/check-out')?.body.note, '3 turns in Pixel Bay. Rested.');
+  });
+
   it('comes back under its old name when given its token', async () => {
     const world = fakeWorld();
     await run(config(), { brain: new ScriptedBrain(), client: world.client('me:secret'), log: quiet });
