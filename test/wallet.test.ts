@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { decodePaymentSignatureHeader, encodePaymentRequiredHeader } from '@x402/core/http';
+import { decodePaymentSignatureHeader, encodePaymentRequiredHeader, encodePaymentResponseHeader } from '@x402/core/http';
 import { generatePrivateKey } from 'viem/accounts';
 import { ConfigError, loadConfig } from '../src/config.ts';
 import { createWallet } from '../src/wallet.ts';
@@ -9,6 +9,7 @@ import { observe } from '../src/world/observe.ts';
 import { fakeWorld } from './fake-world.ts';
 
 const BASE_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const TX = `0x${'ab'.repeat(32)}`;
 
 /** What a paid endpoint answers first: the price, as x402 v2 puts it. */
 function paymentRequired(atomicAmount: string) {
@@ -41,7 +42,8 @@ function paidWorld(atomicAmount: string) {
     }
     const payload = decodePaymentSignatureHeader(signature);
     assert.equal(payload.accepted.amount, atomicAmount);
-    return Response.json({ started: 'pixel_colada' });
+    const receipt = encodePaymentResponseHeader({ success: true, transaction: TX, network: 'eip155:8453' });
+    return Response.json({ started: 'pixel_colada' }, { headers: { 'PAYMENT-RESPONSE': receipt } });
   }) as typeof globalThis.fetch;
   return { fetch, seen };
 }
@@ -68,6 +70,7 @@ describe('the wallet', () => {
     assert.deepEqual(world.seen, [{ paid: false }, { paid: true }]);
     assert.equal(wallet!.spentUsd(), 0.01);
     assert.equal(wallet!.leftUsd(), 0.49);
+    assert.deepEqual(wallet!.payments(), [{ usd: 0.01, transaction: TX, url: `https://basescan.org/tx/${TX}` }]);
   });
 
   it('turns down what would go over the budget, as a refusal the brain can read', async () => {
@@ -78,6 +81,7 @@ describe('the wallet', () => {
     await assert.rejects(client.doActivity('pixel_colada'), (err: unknown) => err instanceof WorldRefusal && err.code === 'payment_declined');
     assert.deepEqual(world.seen, [{ paid: false }], 'nothing was signed');
     assert.equal(wallet!.spentUsd(), 0);
+    assert.deepEqual(wallet!.payments(), []);
   });
 
   it('turns down a single payment over its own cap', async () => {

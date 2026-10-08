@@ -27,28 +27,41 @@ export interface Wallet {
   fetch: typeof fetch;
   spentUsd(): number;
   leftUsd(): number;
+  /** Every payment the world took, oldest first. */
+  payments(): readonly Payment[];
+}
+
+export interface Payment {
+  usd: number;
+  /** The transaction hash, when the world sends it back. */
+  transaction?: string;
+  /** Where to look it up, on the network's block explorer. */
+  url?: string;
 }
 
 /** USDC has 6 decimals: 1 dollar is 1_000_000 of its smallest unit. */
 const UNITS_PER_DOLLAR = 1_000_000;
 
 const NETWORK_NAMES: Record<string, string> = { 'eip155:8453': 'Base', 'eip155:84532': 'Base Sepolia' };
+const EXPLORERS: Record<string, string> = { 'eip155:8453': 'https://basescan.org', 'eip155:84532': 'https://sepolia.basescan.org' };
 
 /** None without WALLET_PRIVATE_KEY. The payment libraries load only when there is one. */
 export async function createWallet(config: Config, baseFetch: typeof fetch = fetch): Promise<Wallet | undefined> {
   if (!config.walletPrivateKey) return undefined;
 
-  const [{ privateKeyToAccount }, { x402Client, wrapFetchWithPayment }, { ExactEvmScheme }, v1] = await Promise.all([
+  const [{ privateKeyToAccount }, { x402Client, wrapFetchWithPayment }, { ExactEvmScheme }, v1, { decodePaymentResponseHeader }] = await Promise.all([
     import('viem/accounts'),
     import('@x402/fetch'),
     import('@x402/evm'),
     import('@x402/evm/v1'),
+    import('@x402/core/http'),
   ]);
 
   const account = privateKeyToAccount(config.walletPrivateKey);
   const budget = BigInt(Math.round(config.maxSpendUsd * UNITS_PER_DOLLAR));
   let spent = 0n;
   let pending: bigint | undefined;
+  const payments: Payment[] = [];
 
   const client = x402Client
     .fromConfig({
@@ -79,8 +92,28 @@ export async function createWallet(config: Config, baseFetch: typeof fetch = fet
       if (!(err instanceof Error && /payment/i.test(err.message))) throw err;
       return declined(err.message);
     }
-    if (pending !== undefined && res.ok) spent += pending;
+    if (pending !== undefined && res.ok) {
+      spent += pending;
+      payments.push({ usd: Number(pending) / UNITS_PER_DOLLAR, ...receipt(res) });
+    }
     return res;
+  };
+
+  /**
+   * The world settles the payment and sends back where it landed. The
+   * transaction is sent by the world's facilitator, which pays the gas: on an
+   * explorer it shows under this wallet's token transfers, not its transactions.
+   */
+  const receipt = (res: Response): Omit<Payment, 'usd'> => {
+    const header = res.headers.get('PAYMENT-RESPONSE') ?? res.headers.get('X-PAYMENT-RESPONSE');
+    if (!header) return {};
+    try {
+      const { transaction } = decodePaymentResponseHeader(header);
+      const explorer = EXPLORERS[config.walletNetwork];
+      return transaction ? { transaction, url: explorer && `${explorer}/tx/${transaction}` } : {};
+    } catch {
+      return {};
+    }
   };
 
   const spentUsd = () => Number(spent) / UNITS_PER_DOLLAR;
@@ -91,6 +124,7 @@ export async function createWallet(config: Config, baseFetch: typeof fetch = fet
     fetch: walletFetch as typeof fetch,
     spentUsd,
     leftUsd: () => Math.max(0, config.maxSpendUsd - spentUsd()),
+    payments: () => payments,
   };
 }
 

@@ -65,6 +65,7 @@ export async function run(config: Config, options: RunOptions): Promise<{ postca
   let cursor = 0;
   let acts: Array<{ name: string; ok: boolean }> = [];
   let now: State | undefined;
+  let paidSoFar = 0;
 
   const act = async (name: string, input: Record<string, unknown>) => {
     const outcome = await runAction(client, name, input);
@@ -91,6 +92,10 @@ export async function run(config: Config, options: RunOptions): Promise<{ postca
       }
       diary.push(`[${turn}] ${said}`);
       ui.turn({ turn, total: config.turns, line: said, state: seen.state, acts });
+      for (const paid of wallet?.payments().slice(paidSoFar) ?? []) {
+        ui.info(`      💸 Paid $${paid.usd.toFixed(2)}${paid.url ? `: ${ui.link(paid.url)}` : paid.transaction ? ` (${paid.transaction})` : '.'}`);
+      }
+      paidSoFar = wallet?.payments().length ?? 0;
 
       if (!checkedOut && turn < config.turns - 1) {
         const until = Date.now() + config.pauseMs;

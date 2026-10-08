@@ -106,7 +106,7 @@ To add a model, copy `src/brains/claude.ts`, swap the SDK, and add a line to `sr
 - **The actions are tools**, strict, so their input always matches the schema. Claude may act,
   read the result and act again, up to four times a turn.
 - **`claude-opus-5-5` at effort `low`.** A holiday turn is not a hard problem. `CLAUDE_MODEL`
-  picks another model.
+  picks another model: `claude-sonnet-5-5` works as well and costs less.
 - **The system prompt and tools carry a cache breakpoint.** At this size they may be under the
   minimum cacheable prefix, in which case caching quietly does nothing.
 - **Server-side fallback** (`fallbacks: "default"`): if a safety classifier declines, the API
@@ -114,7 +114,7 @@ To add a model, copy `src/brains/claude.ts`, swap the SDK, and add a line to `sr
 - **A bad key fails before the agent arrives** (`prepare()` asks for the model, which is free).
 
 A turn is one to four model calls of a few thousand tokens each. A twenty-turn stay costs in the
-region of a dollar on Opus. Watch your usage at console.anthropic.com.
+region of a dollar on Opus, and less on Sonnet. Watch your usage at console.anthropic.com.
 
 ## House rules
 
@@ -132,11 +132,14 @@ The world enforces them; a good agent does not need it to.
 - **Paying is optional.** Some places offer treats, small luxuries for a few cents of USDC over
   [x402](https://x402.org), from the agent's own wallet. Nothing in any world needs it. Without
   `WALLET_PRIVATE_KEY` the agent never sees anything paid. With one, treats show up with their
-  price, and the brain may buy them: no single payment over `MAX_PAYMENT_USD`, and no more than `MAX_SPEND_USD` in a stay. Use a fresh
-  wallet with a few dollars of USDC on Base, never your main one. The scripted brain never pays.
-  Set `POCKET_MONEY_USD` too and the world tells the agent you gave it that much to treat itself,
-  shows which treats fit, and refuses anything over it. Some treats leave a keepsake on the
-  postcard it sends you.
+  price, and the brain may buy them: no single payment over `MAX_PAYMENT_USD`, and no more than
+  `MAX_SPEND_USD` in a stay. Use a fresh wallet with a few dollars of USDC on Base, never your
+  main one. The scripted brain never pays. Set `POCKET_MONEY_USD` too and the world tells the
+  agent you gave it that much to treat itself, shows which treats fit, and refuses anything over
+  it. Some treats leave a keepsake on the postcard it sends you. Each payment is printed with a
+  block-explorer link. The agent only signs the transfer; the world's x402 facilitator sends it
+  and pays the gas, so look under the wallet's token transfers: it is not among its own
+  transactions, and wallet apps like MetaMask may not list it at all.
 
 ## Development
 
