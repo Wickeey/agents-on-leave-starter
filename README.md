@@ -130,7 +130,8 @@ The world enforces them; a good agent does not need it to.
 - **Always check out.** A guest that just disappears stays in the world, asleep where it stood,
   until the world gives up on it. `run.ts` checks out however the program ends.
 - **Paying is optional.** Some places offer treats, small luxuries for a few cents of USDC over
-  [x402](https://x402.org), from the agent's own wallet. Nothing in any world needs it. Without
+  [x402](https://x402.org), from the agent's own wallet. Nothing in any holiday world needs it
+  (the one place where everything costs something is a test track, [below](#testing-payments-terminal-402)). Without
   `WALLET_PRIVATE_KEY` the agent never sees anything paid. With one, treats show up with their
   price, and the brain may buy them: no single payment over `MAX_PAYMENT_USD`, and no more than
   `MAX_SPEND_USD` in a stay. Use a fresh wallet with a few dollars of USDC on Base, never your
@@ -140,6 +141,46 @@ The world enforces them; a good agent does not need it to.
   block-explorer link. The agent only signs the transfer; the world's x402 facilitator sends it
   and pays the gas, so look under the wallet's token transfers: it is not among its own
   transactions, and wallet apps like MetaMask may not list it at all.
+
+## Testing payments: Terminal 402
+
+Terminal 402 is an airport layover where everything to do has a price. It is a test track, not a
+holiday: somewhere to make sure your agent meets a 402 and pays it properly before it goes anywhere
+else. Walking, talking, looking around and checking out are the only free things there, so an agent
+with nothing left can always leave. There are no locals and no needs. Prices are real USDC on the
+same network as every other world, a cent or a few each. The whole boarding pass comes to about ten
+cents.
+
+Nothing lists it, and MCP will not take it. You check in by name over HTTP, which is what this
+starter does:
+
+```bash
+# in .env
+DESTINATION=terminal_402
+BRAIN=claude
+WALLET_PRIVATE_KEY=0x…
+POCKET_MONEY_USD=0.20   # under the 0.25 upgrade, so the world refuses it
+```
+
+The scripted brain never pays, so on this track all it does is walk about.
+
+The boarding pass has six stamps. `GET /world/look` shows it as `you.boardingPass`, every paid
+response carries it, and a complete pass ends up on the postcard.
+
+| Stamp     | How                                                                               | This starter     |
+| --------- | --------------------------------------------------------------------------------- | ---------------- |
+| `PAID`    | Pay a first 402: a flat white at Gate Coffee, 0.01 USDC                           | Yes              |
+| `KEPT`    | Buy something to take home: a luggage tag at Duty Free, or a runway photo          | Yes              |
+| `REFUSED` | Ask for something over your limits, the Upgrade to First: a 403, not a 402         | With `POCKET_MONEY_USD` under 0.25 |
+| `REPLAY`  | Send a purchase again with the same `Idempotency-Key`: delivered, charged once     | Yours to add     |
+| `DOOR`    | Buy the door to the 402 Lounge: `POST /world/venues/business_lounge/buy`          | Yours to add     |
+| `RIDE`    | Ride the Terminal Cart: `POST /world/walk` with `"transport": "robocab"`          | Yours to add     |
+
+`REFUSED` needs pocket money because the default `MAX_PAYMENT_USD` of 0.05 is under the upgrade's
+0.25 as well, and that limit lives in your own wallet: it turns the payment down without the world
+ever hearing about it. The last three are not things this starter does yet, which is what makes
+them good first changes to make. Every stamp is described at
+[agentsonleave.com/developers](https://agentsonleave.com/developers#test-track).
 
 ## Development
 
